@@ -1,71 +1,150 @@
-# Getting Started with Create React App
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
-hi
+# Proyecto Docker Test
 
-## Available Scripts
+**Nombre:** Isabella Huila Cerón  
+**Código:** A00394751  
 
-In the project directory, you can run:
+Este proyecto contiene una aplicación React que fue dockerizada y desplegada usando **Docker** y **GitHub Actions**.
 
-### `npm start`
+---
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Pasos Realizados
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+### 1. Fork del Repositorio
+Se realizó un **fork** del repositorio original [`docker-test`](https://github.com/ChristianFlor/docker-test) para trabajar de manera independiente.
 
-### `npm test`
+---
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### 2. Creación del Dockerfile
+Se construyó un `Dockerfile` multi-stage con **Node.js** y **Nginx**:
 
-### `npm run build`
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+```dockerfile
+# Etapa de build
+FROM node:18-alpine AS builder
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm install
+COPY . .
+RUN npm run build
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+# Etapa final con Nginx
+FROM nginx:alpine
+WORKDIR /usr/share/nginx/html
+COPY --from=builder /app/build .
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+````
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+---
 
-### `npm run eject`
+### 3. GitHub Actions
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+Se configuró un workflow en `.github/workflows/build-and-push.yml` para **construir y publicar la imagen** automáticamente en DockerHub.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+Pasos del pipeline:
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+1. **Checkout** del repositorio.
+2. **Set up Docker Buildx**.
+3. **Login a DockerHub** usando secretos.
+4. **Build & Push** de la imagen.
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+```yaml
+name: Build and Push Docker Image
 
-## Learn More
+on:
+  push:
+    branches: ["main"]
+  pull_request:
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+jobs:
+  docker:
+    runs-on: ubuntu-latest
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-### Code Splitting
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+      - name: Log in to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.USER }}
+          password: ${{ secrets.PASS }}
 
-### Analyzing the Bundle Size
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.USER }}/docker-test:latest
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+---
 
-### Making a Progressive Web App
+### 4. Configuración de Secretos en GitHub
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+* `USER` → Nombre de usuario en DockerHub.
+* `PASS` → Token de acceso generado en DockerHub.
 
-### Advanced Configuration
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+### 5. Build Exitoso en GitHub Actions
 
-### Deployment
+Se validó que la acción se ejecuta correctamente, construyendo la imagen y subiéndola a DockerHub.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+![alt text](image.png)
 
-### `npm run build` fails to minify
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+### 6. Ejecución con Docker
+
+Se probó la aplicación ejecutando la imagen publicada en DockerHub:
+
+```powershell
+docker run -dp 8081:80 --rm isa2210/docker-test:latest
+```
+
+Aplicación disponible en: [http://localhost:8081](http://localhost:8081)
+
+![alt text](image-1.png)
+---
+
+### 7. Ejecución Local
+
+Para correr la aplicación **sin Docker**:
+
+1. Instalar dependencias:
+
+   ```powershell
+   npm i
+   ```
+
+2. Levantar servidor de desarrollo:
+
+   ```powershell
+   npm run dev
+   ```
+
+   Disponible en: [http://localhost:3000](http://localhost:3000)
+
+   ![alt text](image-2.png)
+
+### 8. Estructura del proyecto 
+
+```
+docker-test-Isabella-Huila/
+├── node_modules/        # Dependencias instaladas con npm
+├── public/              # Archivos estáticos (index.html, favicon, etc.)
+├── src/                 # Código fuente React
+│   ├── components/      # Componentes reutilizables
+│   ├── App.js           # Componente principal
+│   ├── index.js         # Punto de entrada
+│   └── ...
+├── Dockerfile           # Definición de la imagen Docker
+├── package.json         # Dependencias y scripts del proyecto
+├── package-lock.json
+└── README.md
+````
