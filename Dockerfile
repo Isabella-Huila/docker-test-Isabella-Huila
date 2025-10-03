@@ -13,6 +13,9 @@ RUN npm install
 # Copia el resto de los archivos de la aplicación
 COPY . .
 
+# 🔑 Ajusta permisos para react-scripts
+RUN chmod +x node_modules/.bin/react-scripts
+
 # Construye la aplicación para producción
 RUN npm run build
 
